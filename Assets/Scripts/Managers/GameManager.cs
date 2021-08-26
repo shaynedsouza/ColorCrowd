@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using Cinemachine;
-
+using underDOGS.SDKEvents;
 public class GameManager : MonoBehaviour
 {
     public static GameManager _instance;
@@ -25,7 +25,7 @@ public class GameManager : MonoBehaviour
     [SerializeField] public AudioSource WinEnd_audio;
     private void Awake()
     {
-        
+
         _instance = this;
     }
     public List<Material> _mCrowd;
@@ -63,12 +63,15 @@ public class GameManager : MonoBehaviour
         if (VariableHolder.instance.Colorchange)
         {
             PlayerCTRL.instance.Set_playerColor(type);
-        }        
+        }
     }
 
     public void OnStart()
     {
-        
+
+
+
+
         int tilesToSpwan = Random.Range(VariableHolder.instance.Min_Tiles, VariableHolder.instance.Max_Tiles);
 
         LevelGeneration.instance.Instantiate_Tiles(tilesToSpwan);
@@ -81,7 +84,7 @@ public class GameManager : MonoBehaviour
 
         if (VariableHolder.instance.Max_Tiles >= 16) VariableHolder.instance.Max_Tiles = 8;
 
-        GameObject obj = Instantiate(player,player_Pos.transform.position,Quaternion.identity);
+        GameObject obj = Instantiate(player, player_Pos.transform.position, Quaternion.identity);
 
         //Camera.main.transform.parent = obj.transform.Find("Thief(Player)_1").gameObject.transform;
         cam1.m_Follow = obj.transform.Find("Thief(Player)_1").gameObject.transform;
@@ -89,13 +92,23 @@ public class GameManager : MonoBehaviour
         VariableHolder.instance.SaveValues();
 
         //Spawning Police
-        Instantiate(police,police_pos.transform.position,Quaternion.identity);
-        
+        Instantiate(police, police_pos.transform.position, Quaternion.identity);
+
+
 
     }
 
     public void GameOver()
     {
+
+        if (SDKManager.instance != null)
+        {
+            SDKEventData endData;
+            endData.level = VariableHolder.instance.Level_Count;
+            endData.status = "fail";
+            SDKManager.instance.SendEvent(endData);
+        }
+
         VariableHolder.instance.IsPlaying = false;
         run.Stop();
         UiManager.instance.GameOver_panelSetActive(true);
@@ -105,15 +118,22 @@ public class GameManager : MonoBehaviour
     public void TapHereToStart()
     {
         VariableHolder.instance.IsPlaying = true;
-        run.Play();//
+        run.Play();
+        if (SDKManager.instance != null)
+        {
+            SDKEventData endData;
+            endData.level = VariableHolder.instance.Level_Count;
+            endData.status = "start";
+            SDKManager.instance.SendEvent(endData);
+        }
     }
 
     public void NextLevel()
     {
         VariableHolder.instance.Level_Count++;
         VariableHolder.instance.SaveValues();
-        SceneManager.LoadScene("GamePlay", LoadSceneMode.Single);
-        
+        // SceneManager.LoadScene("GamePlay", LoadSceneMode.Single);
+        SceneManager.LoadScene("GamePlay");
     }
 
     public void Retry()
@@ -126,9 +146,20 @@ public class GameManager : MonoBehaviour
         Application.Quit();
     }
 
-    
+
     public IEnumerator LevelEnd()
     {
+
+        if (SDKManager.instance != null)
+        {
+            SDKEventData endData;
+            endData.level = VariableHolder.instance.Level_Count;
+            endData.status = "complete";
+            SDKManager.instance.SendEvent(endData);
+        }
+
+
+
         yield return new WaitForSeconds(0.1f);
         //Stopping the sound
         run.Stop();//
